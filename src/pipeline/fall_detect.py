@@ -1,7 +1,7 @@
 """Fall detection pipe element."""
 from .inference import TFInferenceEngine
 from src.pipeline.pose_engine import PoseEngine
-from src import DEFAULT_DATA_DIR
+# from src import DEFAULT_DATA_DIR
 import logging
 import math
 import time
@@ -39,8 +39,8 @@ class FallDetector():
                         confidence_threshold=confidence_threshold)
         self.model_name = model_name
 
-        self._sys_data_dir = DEFAULT_DATA_DIR
-        self._sys_data_dir = Path(self._sys_data_dir)
+        # self._sys_data_dir = DEFAULT_DATA_DIR
+        # self._sys_data_dir = Path(self._sys_data_dir)
 
         # previous pose detection information for frame at time t-1 and t-2 \
         # to compare pose changes against
@@ -296,7 +296,7 @@ class FallDetector():
         # thumbnail.save(
         #                Path(self._sys_data_dir, debug_image_file_name),
         #                format='JPEG')
-        print(Path(self._sys_data_dir, debug_image_file_name))
+        # print(Path(self._sys_data_dir, debug_image_file_name))
         return body_lines_drawn
 
     def get_line_angles_with_yaxis(self, pose_dix):

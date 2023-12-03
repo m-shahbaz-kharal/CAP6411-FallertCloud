@@ -82,3 +82,67 @@ def Fall_prediction(img_1,img_2,img_3=None):
                 return dict_res
         
     return None
+
+if __name__ == '__main__':
+    import socket
+    import struct
+    import base64
+    import io
+    from PIL import Image
+    import threading
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(('192.168.137.1', 3257))
+    server.listen(1)
+
+    def receive_string(sck: socket.socket):
+        try:
+            # Receive the first 4 bytes that contain the length of the string
+            int_bytes = sck.recv(4)
+            string_len = struct.unpack('!I', int_bytes)[0]  # Network order
+            
+            # Now receive the string itself
+            string_bytes = sck.recv(string_len)
+            while len(string_bytes) < string_len:
+                string_bytes += sck.recv(string_len - len(string_bytes))
+            return string_bytes.decode('utf-8')
+        except Exception as e:
+            print(e)
+            try:
+                sck.close()
+            except Exception as ignore:
+                pass
+            return None
+        
+    def string_to_bitmap(base64_encoded_string):
+        try:
+            # Decode the base64 string into bytes
+            encode_bytes = base64.b64decode(base64_encoded_string)
+            
+            # Convert the bytes to an image
+            image_data = io.BytesIO(encode_bytes)
+            image = Image.open(image_data)
+            return image
+        except Exception as e:
+            print(e)
+            return None
+
+    def handle_req(client_socket, client_address):
+        data_string = receive_string(client_socket)
+        print('received data from', client_address, ':', data_string)
+        data_parts = data_string.split(':')
+        event_type = data_parts[0]
+        event_time = data_parts[1]
+        base64_imgs = data_parts[2:]
+        imgs = []
+        for b64_img in base64_imgs: imgs.append(string_to_bitmap(b64_img))
+        print('received', len(imgs), 'images')
+        result = Fall_prediction(imgs[0], imgs[1], imgs[2])
+        print('result:', result)
+
+    while True:
+        client_sock, client_addr = server.accept()
+        handle_req(client_sock, client_addr)
+        print('Connection from', client_addr)
+
+
