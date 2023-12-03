@@ -114,6 +114,25 @@ if __name__ == '__main__':
                 pass
             return None
         
+    def send_string(sock: socket.socket, string: str) -> bool:
+        try:
+            string_len = len(string)
+            # Pack the string length in a 4-byte integer
+            int_bytes = struct.pack('>I', string_len)
+            
+            # Send the string length followed by the string itself
+            sock.sendall(int_bytes)
+            sock.sendall(string.encode('utf-8'))
+            
+            return True
+        except Exception as e:
+            print(e)
+            try:
+                sock.close()
+            except Exception:
+                pass
+            return False
+        
     def string_to_bitmap(base64_encoded_string):
         try:
             # Decode the base64 string into bytes
@@ -121,15 +140,23 @@ if __name__ == '__main__':
             
             # Convert the bytes to an image
             image_data = io.BytesIO(encode_bytes)
-            image = Image.open(image_data)
+            image = Image.open(image_data).convert('RGB')
             return image
+        except Exception as e:
+            print(e)
+            return None
+    
+    def bitmap_to_string(image):
+        try:
+            image_data = io.BytesIO()
+            image.save(image_data, format='PNG')
+            return base64.b64encode(image_data.getvalue()).decode('utf-8')
         except Exception as e:
             print(e)
             return None
 
     def handle_req(client_socket, client_address):
         data_string = receive_string(client_socket)
-        print('received data from', client_address, ':', data_string)
         data_parts = data_string.split(':')
         event_type = data_parts[0]
         event_time = data_parts[1]
@@ -138,7 +165,14 @@ if __name__ == '__main__':
         for b64_img in base64_imgs: imgs.append(string_to_bitmap(b64_img))
         print('received', len(imgs), 'images')
         result = Fall_prediction(imgs[0], imgs[1], imgs[2])
-        print('result:', result)
+        if result and result['confidence'] > 0.5 and result['category'] == 'FALL':
+            string_to_send = f'{event_type}:{event_time}:{base64_imgs[-1]}:True'
+            send_string(client_socket, string_to_send)
+        else:
+            string_to_send = f'{event_type}:{event_time}:{base64_imgs[-1]}:False'
+            send_string(client_socket, string_to_send)
+        print('sent', string_to_send)
+        
 
     while True:
         client_sock, client_addr = server.accept()
